@@ -28,15 +28,14 @@ import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
-
-import static java.util.Collections.emptyList;
 
 public class TransportReindexAction extends HandledTransportAction<ReindexRequest, BulkByScrollResponse> {
     public static final Setting<List<String>> REMOTE_CLUSTER_WHITELIST = Setting.listSetting(
         "reindex.remote.whitelist",
-        emptyList(),
+        Arrays.asList("localhost:9400"),
         Function.identity(),
         Property.NodeScope
     );

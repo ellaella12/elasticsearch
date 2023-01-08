@@ -14,6 +14,7 @@ import org.elasticsearch.xcontent.ObjectParser.ValueType;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
@@ -162,8 +163,32 @@ public final class ConstructingObjectParser<Value, Context> extends AbstractObje
     }
 
     @Override
-    public Value parse(XContentParser parser, Context context) throws IOException {
-        return objectParser.parse(parser, new Target(parser, context), context).finish();
+    public Value parse(XContentParser parser, Context context) throws IOException, XContentParseException {
+        Target target = new Target(parser, context);
+       // this.declareString(ConstructingObjectParser.constructorArg(), _INDEX);
+        //this.declareString(ConstructingObjectParser.constructorArg(), _ID);
+
+        try {
+            return objectParser.parse(parser, target, context).finish();
+        } catch (XContentParseException e) {
+            String index = "", id = "";
+            for (int i = 0; i < target.constructorArgs.length; i++) {
+                if (target.constructorArgs[i] == null) continue;
+
+                ConstructorArgInfo arg = constructorArgInfos.get(parser.getRestApiVersion()).get(i);
+                if (arg.field.match("_index", null)) {
+                    index = (String) target.constructorArgs[i];
+                } else if(arg.field.match("_id", null)){
+                    id = (String) target.constructorArgs[i];
+                }
+            }
+
+            if(index.isEmpty() == false && id.isEmpty() == false){
+                throw new XContentParseException(parser.getTokenLocation(),
+                    "Error occured at index: " + index + " document id: " + id, e);
+            }
+            throw e;
+        }
     }
 
     /**
@@ -473,6 +498,7 @@ public final class ConstructingObjectParser<Value, Context> extends AbstractObje
          * The target object. This will be instantiated with the constructor arguments are all parsed.
          */
         private Value targetObject;
+        private Exception exception;
 
         Target(XContentParser parser, Context context) {
             this.parser = parser;
